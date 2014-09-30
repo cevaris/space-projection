@@ -1,0 +1,9 @@
+dist/
+*.c
+*.o
+*.eventlog
+.cabal-sandbox
+
+*.pdf
+
+SpaceProjection

@@ -1,0 +1,21 @@
+name:              SpaceProjection
+Build-Type:        Simple
+cabal-version:     >= 1.2
+version:           0.1
+author:            Adam Cardenas
+maintainer:        cevaris@gmail.com
+category:          Graphics
+
+extra-source-files:  readme.md
+
+executable SpaceProjection
+    hs-source-dirs:  src
+                     src/objects
+                     src/scene
+                     src/utils
+    main-is:         SpaceProjection.hs
+    build-depends:   base,
+                     GLUT,
+                     OpenGLRaw,
+                     split,
+                     random
