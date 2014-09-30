@@ -4,6 +4,7 @@ import System.Exit ( exitWith, ExitCode(ExitSuccess), exitFailure )
 
 import Graphics.UI.GLUT
 
+import GLUtils
 import Cube
 import Star
 import Grid
@@ -13,28 +14,26 @@ import Pyramid
 import Station
 import Sphere
 
-import GLUtils
-
 ----------------------------------------------------------------------------------------------------------------
 -- Global State
 type View = (GLfloat, GLfloat, GLfloat)
 
 data Zoom = In | Out deriving (Show)
-data Mod = Increase | Decrease deriving (Show)
+--data Mod = Increase | Decrease deriving (Show)
 
-data ProjectionView = Perspective | Orthogonal | FirstPerson deriving (Show)
+data ProjectionView = PerspectiveView | OrthogonalView | FirstPersonView deriving (Show, Eq)
 
 zoomDelta = 5e-4
 
 data State = State {
    frames  :: IORef Int,
    t0      :: IORef Int,
-   ph'     :: IORef GLfloat,
-   th'     :: IORef GLfloat,
-   gr'     :: IORef GLfloat,
-   asp     :: IORef GLfloat,
-   fov     :: IORef GLfloat,
-   dim     :: IORef GLfloat,
+   ph'     :: IORef Float,
+   th'     :: IORef Float,
+   gr'     :: IORef Float,
+   asp     :: IORef Float,
+   fov     :: IORef Float,
+   dim     :: IORef Float,
    proj    :: IORef ProjectionView,
    info    :: IORef (String,String)
  }
@@ -48,8 +47,8 @@ makeState = do
   gr <- newIORef 0
   fv <- newIORef 55
   as <- newIORef 1
-  di <- newIORef 5
-  pr <- newIORef Orthogonal
+  di <- newIORef 500
+  pr <- newIORef OrthogonalView
   i  <- newIORef ("","")
   return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, proj = pr, info = i }
 
@@ -69,16 +68,21 @@ keyboard state (SpecialKey KeyUp)   _ _ _ = modRotate state KeyUp
 keyboard state (SpecialKey KeyDown) _ _ _ = modRotate state KeyDown
 keyboard state (SpecialKey KeyLeft) _ _ _ = modRotate state KeyLeft
 keyboard state (SpecialKey KeyRight)_ _ _ = modRotate state KeyRight
-keyboard state (Char '1')           _ _ _ = modProjection state Perspective
-keyboard state (Char '2')           _ _ _ = modProjection state Orthogonal
-keyboard state (Char '3')           _ _ _ = modProjection state FirstPerson
+keyboard state (Char '1')           _ _ _ = modProjection state PerspectiveView
+keyboard state (Char '2')           _ _ _ = modProjection state OrthogonalView
+keyboard state (Char '3')           _ _ _ = modProjection state FirstPersonView
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
 
 
 modProjection :: State -> ProjectionView -> IO ()
-modProjection state proj' = proj state $~! (\x -> proj')
+modProjection state proj' = do
+  -- Update PerspectiveView state
+ 
+  proj state $~! (\x -> proj')
+  -- Render new state
+  projectView state proj'
 
 modRotate :: State -> SpecialKey -> IO ()
 modRotate state KeyDown = do
@@ -120,33 +124,46 @@ visible :: State -> Visibility -> IO ()
 visible state Visible    = idleCallback $= Just (idle state)
 visible _     NotVisible = idleCallback $= Nothing
 
-projectView :: State -> ProjectionView -> Size -> IO ()
-projectView state proj' s@(Size width height) = do
+projectView :: State -> ProjectionView -> IO ()
+projectView state OrthogonalView  = do
+
+  (Size width height) <- get windowSize
 
   let wf = fromIntegral width
       hf = fromIntegral height
 
-  viewport $= (Position 0 0, s)
-  matrixMode $= Projection
-  loadIdentity  
 
   if width <= height
     then ortho (-1) 1 (-1) (hf/wf) (-500) (500:: GLdouble)
     else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)
-  matrixMode $= Modelview 0
 
-  loadIdentity
+  putStrLn $ show OrthogonalView
+projectView state PerspectiveView = do
+  fov <- get (fov state)
+  asp <- get (asp state)
+  dim <- get (dim state)
+  setPerspective fov asp (500/4) (500*4)
+
+  putStrLn $ show PerspectiveView
+
+
+
+  
   
 
 reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
 
+  viewport   $= (Position 0 0, s)
+  matrixMode $= Projection
+  loadIdentity
+
+  -- Update Projection
   proj' <- get (proj state)
+  projectView state proj'
 
-  --matrixMode $= Projection
-  --loadIdentity
-
-  projectView state proj' s
+  matrixMode $= Modelview 0
+  loadIdentity
 
 
   
@@ -170,7 +187,7 @@ updateInfo state = do
     proj <- get (proj state)
     let seconds = fromIntegral (t - t0') / 1000 :: GLfloat
         fps = fromIntegral f / seconds
-        result = ("[ph " ++ round2GL ph ++ "] [th " ++ round2GL th ++ "] [gr " ++ round2GL gr ++ "]",
+        result = ("[ph " ++ round2 ph ++ "] [th " ++ round2 th ++ "] [gr " ++ round2 gr ++ "]",
                   "[proj " ++ show proj ++ "] [asp " ++ show asp ++  "] [fov " ++ show fov ++  "] [ dim" ++ show dim ++  "] ")
     info state $= result
     t0 state $= t
@@ -186,17 +203,32 @@ draw state = do
   ph <- get (ph' state)
   th <- get (th' state)
   gr <- get (gr' state)
+  dim <- get (dim state)
+  proj' <- get (proj state)
   info <- get (info state)
   
   loadIdentity
 
   scale 0.5 0.5 (0.5::GLfloat)
 
-  rotate ph (Vector3 1 0 0)
-  rotate th (Vector3 0 1 0)
+  rotate (fToGL(ph)) (Vector3 1 0 0)
+  rotate (fToGL(th)) (Vector3 0 1 0)
 
   -- Set up perspective
-  lookAt (Vertex3 0.1 0.0 0.1) (Vertex3 0 0 0) (Vector3 0 1 0)
+  let ex = (-2)*dim*sin(th)*cos(ph)
+      ey =    2*dim        *cos(ph)
+      ez =    2*dim*cos(th)*cos(ph)
+
+  --nthElement (x:xs) a
+  --  | a <= 0    = Nothing
+  --  | a == 1    = Just x
+  --  | otherwise = nthElement xs (a-1)
+
+  if proj' == PerspectiveView
+    then setLookAt (ex,ey,ez) (0,0,0) (0,cos(ph),0)
+    else postRedisplay Nothing
+  
+  --lookAt (Vertex3 ex ey ez) (Vertex3 0 0 0) (Vector3 0 cos(ph) 0)
   
   drawGrid 5
   
@@ -207,7 +239,7 @@ draw state = do
   drawStarCluster (1, 10, 10)
 
   drawStation 0.0 0.5 (1,0,0) (0,1,0)
-  drawStation gr 0.35 ((-2),0,0) (0,0,1)
+  drawStation (fToGL(gr)) 0.35 ((-2),0,0) (0,0,1)
 
   drawFighter 0.5 (0.55, 0, 0)  (0,1,0)  ((-1), 0,0)
   drawFighter 0.7 (1, 0.7, 0)  (1,0,0)  (0,1,0)

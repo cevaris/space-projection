@@ -5,8 +5,13 @@ import Numeric
 import Graphics.Rendering.OpenGL.Raw.ARB.WindowPos
 import Graphics.UI.GLUT
 
-toGfloat :: Float -> GLfloat
-toGfloat f = (realToFrac f)::GLfloat
+type Point3 = (Float, Float, Float)
+
+--toGfloat :: Float -> GLfloat
+--toGfloat f = (realToFrac f)::GLfloat
+
+fToGL :: Float -> GLfloat
+fToGL f = (realToFrac f)::GLfloat
 
 drawVertex3f :: Float -> Float -> Float -> IO ()
 drawVertex3f x y z = vertex $ vertex3f x y z
@@ -14,17 +19,30 @@ drawVertex3f x y z = vertex $ vertex3f x y z
 vertex3f :: Float -> Float -> Float -> Vertex3 GLfloat
 vertex3f x y z = Vertex3 ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat) ((realToFrac z)::GLfloat)
 
+vertex3d :: Float -> Float -> Float -> Vertex3 GLdouble
+vertex3d x y z = Vertex3 ((realToFrac x)::GLdouble) ((realToFrac y)::GLdouble) ((realToFrac z)::GLdouble)
+
 vertex4f :: Float -> Float -> Float -> Float -> Vertex4 GLfloat
 vertex4f x y z w = Vertex4 ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat) ((realToFrac z)::GLfloat) ((realToFrac w)::GLfloat)
 
 vector3f :: Float -> Float -> Float -> Vector3 GLfloat
 vector3f x y z = Vector3 ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat) ((realToFrac z)::GLfloat)
 
+vector3d :: Float -> Float -> Float -> Vector3 GLdouble
+vector3d x y z = Vector3 ((realToFrac x)::GLdouble) ((realToFrac y)::GLdouble) ((realToFrac z)::GLdouble)
+
 scale3f :: Float -> Float -> Float -> IO ()
 scale3f x y z = scale ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat) ((realToFrac z)::GLfloat)
 
 color3f :: Float -> Float -> Float -> IO ()
 color3f x y z = color (Color3 ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat) ((realToFrac z)::GLfloat))
+
+setPerspective :: Float -> Float -> Float -> Float -> IO ()
+setPerspective fov aspect zNear zFar = perspective ((realToFrac fov)::GLdouble) ((realToFrac aspect)::GLdouble) ((realToFrac zNear)::GLdouble) ((realToFrac zFar)::GLdouble)
+
+setLookAt :: Point3 -> Point3 -> Point3 -> IO ()
+setLookAt (ex,ey,ez) (cx,cy,cz) (ux,uy,uz) = lookAt (vertex3d ex ey ez) (vertex3d cx cy cz) (vector3d ux uy uz)
+
 
 glWindowPos :: GLfloat -> GLfloat -> IO ()
 glWindowPos x y = glWindowPos2f x y
