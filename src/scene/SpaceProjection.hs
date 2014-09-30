@@ -120,16 +120,9 @@ visible :: State -> Visibility -> IO ()
 visible state Visible    = idleCallback $= Just (idle state)
 visible _     NotVisible = idleCallback $= Nothing
 
-project :: State -> IO ()
-project state = do
-  matrixMode $= Projection
-  loadIdentity
+projectView :: State -> ProjectionView -> Size -> IO ()
+projectView state proj' s@(Size width height) = do
 
-  postRedisplay Nothing
-
-
-reshape :: ReshapeCallback
-reshape s@(Size width height) = do
   let wf = fromIntegral width
       hf = fromIntegral height
 
@@ -143,6 +136,20 @@ reshape s@(Size width height) = do
   matrixMode $= Modelview 0
 
   loadIdentity
+  
+
+reshape :: State -> ReshapeCallback
+reshape state s@(Size width height) = do
+
+  proj' <- get (proj state)
+
+  --matrixMode $= Projection
+  --loadIdentity
+
+  projectView state proj' s
+
+
+  
 
 
 ----------------------------------------------------------------------------------------------------------------
@@ -228,13 +235,13 @@ main = do
     initialDisplayMode $= [ RGBMode, WithDepthBuffer, DoubleBuffered ]
     
     initialWindowPosition $= Position 500 500
-    _window <- createWindow "Space Scene"
+    _window <- createWindow "Space Scene Projection - Adam Cardenas"
 
     state <- makeState
     myInit args state
 
     displayCallback $= draw state
-    reshapeCallback $= Just reshape
+    reshapeCallback $= Just (reshape state)
     
     keyboardMouseCallback $= Just (keyboard state)
     visibilityCallback $= Just (visible state)
