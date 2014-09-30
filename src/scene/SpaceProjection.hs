@@ -15,13 +15,15 @@ import Sphere
 
 import GLUtils
 
-
 ----------------------------------------------------------------------------------------------------------------
 -- Global State
 type View = (GLfloat, GLfloat, GLfloat)
 
-data Zoom = In | Out
-data Mod = Increase | Decrease
+data Zoom = In | Out deriving (Show)
+data Mod = Increase | Decrease deriving (Show)
+
+data ProjectionView = Perspective | Orthogonal | FirstPerson deriving (Show)
+
 zoomDelta = 5e-4
 
 data State = State {
@@ -29,7 +31,11 @@ data State = State {
    t0      :: IORef Int,
    ph'     :: IORef GLfloat,
    th'     :: IORef GLfloat,
-   gr'      :: IORef GLfloat,
+   gr'     :: IORef GLfloat,
+   asp     :: IORef GLfloat,
+   fov     :: IORef GLfloat,
+   dim     :: IORef GLfloat,
+   proj    :: IORef ProjectionView,
    info    :: IORef (String,String)
  }
 
@@ -40,8 +46,12 @@ makeState = do
   ph <- newIORef 0
   th <- newIORef 0
   gr <- newIORef 0
+  fv <- newIORef 55
+  as <- newIORef 1
+  di <- newIORef 5
+  pr <- newIORef Orthogonal
   i  <- newIORef ("","")
-  return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, info = i }
+  return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, proj = pr, info = i }
 
 ----------------------------------------------------------------------------------------------------------------
 -- Timer 
@@ -59,9 +69,16 @@ keyboard state (SpecialKey KeyUp)   _ _ _ = modRotate state KeyUp
 keyboard state (SpecialKey KeyDown) _ _ _ = modRotate state KeyDown
 keyboard state (SpecialKey KeyLeft) _ _ _ = modRotate state KeyLeft
 keyboard state (SpecialKey KeyRight)_ _ _ = modRotate state KeyRight
+keyboard state (Char '1')           _ _ _ = modProjection state Perspective
+keyboard state (Char '2')           _ _ _ = modProjection state Orthogonal
+keyboard state (Char '3')           _ _ _ = modProjection state FirstPerson
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
+
+
+modProjection :: State -> ProjectionView -> IO ()
+modProjection state proj' = proj state $~! (\x -> proj')
 
 modRotate :: State -> SpecialKey -> IO ()
 modRotate state KeyDown = do
@@ -103,6 +120,14 @@ visible :: State -> Visibility -> IO ()
 visible state Visible    = idleCallback $= Just (idle state)
 visible _     NotVisible = idleCallback $= Nothing
 
+project :: State -> IO ()
+project state = do
+  matrixMode $= Projection
+  loadIdentity
+
+  postRedisplay Nothing
+
+
 reshape :: ReshapeCallback
 reshape s@(Size width height) = do
   let wf = fromIntegral width
@@ -132,9 +157,14 @@ updateInfo state = do
     ph <- get (ph' state)
     th <- get (th' state)
     gr <- get (gr' state)
+    asp <- get (asp state)
+    fov <- get (fov state)
+    dim <- get (dim state)
+    proj <- get (proj state)
     let seconds = fromIntegral (t - t0') / 1000 :: GLfloat
         fps = fromIntegral f / seconds
-        result = ("[ph " ++ round2GL ph ++ "] [th " ++ round2GL th ++ "] [gr " ++ round2GL gr ++ "]", "")
+        result = ("[ph " ++ round2GL ph ++ "] [th " ++ round2GL th ++ "] [gr " ++ round2GL gr ++ "]",
+                  "[proj " ++ show proj ++ "] [asp " ++ show asp ++  "] [fov " ++ show fov ++  "] [ dim" ++ show dim ++  "] ")
     info state $= result
     t0 state $= t
     frames state $= 0
