@@ -13,6 +13,15 @@ type Point3 = (Float, Float, Float)
 fToGL :: Float -> GLfloat
 fToGL f = (realToFrac f)::GLfloat
 
+--glCos :: Float -> Float
+--glCos x = cos(3.1415927/180*x)
+
+--glSin :: Float -> Float
+--glSin x = sin(3.1415927/180*x)
+
+toDeg :: Float -> Float
+toDeg x = x*(3.1415927/180)
+
 drawVertex3f :: Float -> Float -> Float -> IO ()
 drawVertex3f x y z = vertex $ vertex3f x y z
 

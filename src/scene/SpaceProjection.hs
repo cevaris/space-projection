@@ -71,11 +71,23 @@ keyboard state (SpecialKey KeyLeft) _ _ _ = modRotate state KeyLeft
 keyboard state (SpecialKey KeyRight)_ _ _ = modRotate state KeyRight
 keyboard state (Char 'd')           _ _ _ = modDim state Decrease
 keyboard state (Char 'D')           _ _ _ = modDim state Increase
+keyboard state (Char 'f')           _ _ _ = modFov state Decrease
+keyboard state (Char 'F')           _ _ _ = modFov state Increase
 keyboard state (Char '1')           _ _ _ = modProjection state PerspectiveView
 keyboard state (Char '2')           _ _ _ = modProjection state OrthogonalView
 keyboard state (Char '3')           _ _ _ = modProjection state FirstPersonView
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
+
+
+
+modFov :: State -> ModDirection -> IO ()
+modFov state Decrease = do
+  fov state $~! (\x -> x - 2)
+  postRedisplay Nothing
+modFov state Increase = do
+  fov state $~! (+2)
+  postRedisplay Nothing  
 
 
 modDim :: State -> ModDirection -> IO ()
@@ -119,6 +131,11 @@ idle state = do
   th  <- get (th' state)
   gr  <- get (gr' state)
   dim' <- get (dim state)
+  fov' <- get (fov state)
+
+  if fov' < 65
+    then fov state $~! (\x -> 65)
+    else postRedisplay Nothing
 
   if dim' < 1
     then dim state $~! (\x -> 1)
@@ -219,23 +236,20 @@ draw state = do
   proj' <- get (proj state)
   info <- get (info state)
 
-
-
   loadIdentity
 
   projectView state proj'
 
-  --scale 0.5 0.5 (0.5::GLfloat)
-
-
   -- Set up perspective
   if proj' == PerspectiveView
     then do
-      let ex = (-2)*dim*sin(th)*cos(ph)
-          ey =    2*dim        *sin(ph)
-          ez =    2*dim*cos(th)*cos(ph)
-      setLookAt (ex,ey,ez) (0,0,0) (0,cos(ph),0)
+      let ex = (-2)*dim*sin(toDeg(th))*cos(toDeg(ph))
+          ey =    2*dim               *sin(toDeg(ph))
+          ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
+      setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
+      --setLookAt (0.1,0,0.1) (0,0,0) (0,cos(toDeg(ph)),0)
       putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez
+      postRedisplay Nothing
     else do
       rotate (fToGL(ph)) (Vector3 1 0 0)
       rotate (fToGL(th)) (Vector3 0 1 0)
