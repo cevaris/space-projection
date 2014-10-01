@@ -16,7 +16,7 @@ import Sphere
 
 ----------------------------------------------------------------------------------------------------------------
 -- Global State
-type View = (GLfloat, GLfloat, GLfloat)
+--type View = (GLfloat, GLfloat, GLfloat)
 
 data Zoom = In | Out deriving (Show)
 --data Mod = Increase | Decrease deriving (Show)
@@ -45,10 +45,11 @@ makeState = do
   ph <- newIORef 0
   th <- newIORef 0
   gr <- newIORef 0
-  fv <- newIORef 55
+  fv <- newIORef 100
   as <- newIORef 1
-  di <- newIORef 500
+  di <- newIORef 100
   pr <- newIORef OrthogonalView
+  --pr <- newIORef PerspectiveView
   i  <- newIORef ("","")
   return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, proj = pr, info = i }
 
@@ -126,23 +127,23 @@ visible _     NotVisible = idleCallback $= Nothing
 
 projectView :: State -> ProjectionView -> IO ()
 projectView state OrthogonalView  = do
-
   (Size width height) <- get windowSize
-
   let wf = fromIntegral width
       hf = fromIntegral height
-
-
   if width <= height
     then ortho (-1) 1 (-1) (hf/wf) (-500) (500:: GLdouble)
-    else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)
-
+    else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)  
+  
   putStrLn $ show OrthogonalView
+
 projectView state PerspectiveView = do
   fov <- get (fov state)
   asp <- get (asp state)
   dim <- get (dim state)
   setPerspective fov asp (500/4) (500*4)
+
+  --(Size width height) <- get windowSize
+  --perspective 100 (fromIntegral width / fromIntegral height) 1 500
 
   putStrLn $ show PerspectiveView
 
@@ -155,6 +156,7 @@ reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
 
   viewport   $= (Position 0 0, s)
+  
   matrixMode $= Projection
   loadIdentity
 
@@ -209,24 +211,19 @@ draw state = do
   
   loadIdentity
 
-  scale 0.5 0.5 (0.5::GLfloat)
-
-  rotate (fToGL(ph)) (Vector3 1 0 0)
-  rotate (fToGL(th)) (Vector3 0 1 0)
+  --scale 0.5 0.5 (0.5::GLfloat)
 
   -- Set up perspective
-  let ex = (-2)*dim*sin(th)*cos(ph)
-      ey =    2*dim        *cos(ph)
-      ez =    2*dim*cos(th)*cos(ph)
-
-  --nthElement (x:xs) a
-  --  | a <= 0    = Nothing
-  --  | a == 1    = Just x
-  --  | otherwise = nthElement xs (a-1)
-
   if proj' == PerspectiveView
-    then setLookAt (ex,ey,ez) (0,0,0) (0,cos(ph),0)
-    else postRedisplay Nothing
+    then do
+      let ex = (-2)*dim*sin(th)*cos(ph)
+          ey =    2*dim        *sin(ph)
+          ez =    2*dim*cos(th)*cos(ph)
+      setLookAt (ex,ey,ez) (0,0,0) (0,cos(ph),0)
+    --then do {setLookAt (1,1,0) (0,0,0) (0,1,0); putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez} 
+    else do
+      rotate (fToGL(ph)) (Vector3 1 0 0)
+      rotate (fToGL(th)) (Vector3 0 1 0)
   
   --lookAt (Vertex3 ex ey ez) (Vertex3 0 0 0) (Vector3 0 cos(ph) 0)
   
