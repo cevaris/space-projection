@@ -19,7 +19,7 @@ import Sphere
 --type View = (GLfloat, GLfloat, GLfloat)
 
 data Zoom = In | Out deriving (Show)
---data Mod = Increase | Decrease deriving (Show)
+data ModDirection = Increase | Decrease deriving (Show)
 
 data ProjectionView = PerspectiveView | OrthogonalView | FirstPersonView deriving (Show, Eq)
 
@@ -47,7 +47,7 @@ makeState = do
   gr <- newIORef 0
   fv <- newIORef 100
   as <- newIORef 1
-  di <- newIORef 100
+  di <- newIORef 2
   pr <- newIORef OrthogonalView
   --pr <- newIORef PerspectiveView
   i  <- newIORef ("","")
@@ -69,12 +69,22 @@ keyboard state (SpecialKey KeyUp)   _ _ _ = modRotate state KeyUp
 keyboard state (SpecialKey KeyDown) _ _ _ = modRotate state KeyDown
 keyboard state (SpecialKey KeyLeft) _ _ _ = modRotate state KeyLeft
 keyboard state (SpecialKey KeyRight)_ _ _ = modRotate state KeyRight
+keyboard state (Char 'd')           _ _ _ = modDim state Decrease
+keyboard state (Char 'D')           _ _ _ = modDim state Increase
 keyboard state (Char '1')           _ _ _ = modProjection state PerspectiveView
 keyboard state (Char '2')           _ _ _ = modProjection state OrthogonalView
 keyboard state (Char '3')           _ _ _ = modProjection state FirstPersonView
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
+
+modDim :: State -> ModDirection -> IO ()
+modDim state Decrease = do
+  dim state $~! (\x -> x - 0.1)
+  postRedisplay Nothing
+modDim state Increase = do
+  dim state $~! (+0.1)
+  postRedisplay Nothing  
 
 
 modProjection :: State -> ProjectionView -> IO ()
@@ -105,9 +115,14 @@ modRotate state KeyLeft = do
 idle :: State -> IdleCallback
 idle state = do
 
-  ph <- get (ph' state)
-  th <- get (th' state)
-  gr <- get (gr' state)
+  ph  <- get (ph' state)
+  th  <- get (th' state)
+  gr  <- get (gr' state)
+  dim' <- get (dim state)
+
+  if dim' < 1
+    then dim state $~! (\x -> 1)
+    else postRedisplay Nothing
 
   if gr > 360
     then gr' state $~! (\x -> 0)
@@ -127,14 +142,19 @@ visible _     NotVisible = idleCallback $= Nothing
 
 projectView :: State -> ProjectionView -> IO ()
 projectView state OrthogonalView  = do
-  (Size width height) <- get windowSize
-  let wf = fromIntegral width
-      hf = fromIntegral height
-  if width <= height
-    then ortho (-1) 1 (-1) (hf/wf) (-500) (500:: GLdouble)
-    else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)  
+  --(Size width height) <- get windowSize
+  --let wf = fromIntegral width
+  --    hf = fromIntegral height
+  dim <- get (dim state)
+  asp <- get (asp state)
+  --if width <= height
+  --  then ortho (-1) 1 (-1) (hf/wf) (-500) (500:: GLdouble)
+  --  else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)  
+  --ortho (-asp*dim,asp*dim, (-dim), dim, (-dim), dim)
+  setOrtho ((-asp)*dim) (asp*dim) (-dim) dim (-dim) dim
   
   putStrLn $ show OrthogonalView
+  postRedisplay Nothing
 
 projectView state PerspectiveView = do
   fov <- get (fov state)
@@ -146,6 +166,7 @@ projectView state PerspectiveView = do
   --perspective 100 (fromIntegral width / fromIntegral height) 1 500
 
   putStrLn $ show PerspectiveView
+  postRedisplay Nothing
 
 
 
@@ -156,7 +177,7 @@ reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
 
   viewport   $= (Position 0 0, s)
-  
+
   matrixMode $= Projection
   loadIdentity
 
@@ -208,10 +229,15 @@ draw state = do
   dim <- get (dim state)
   proj' <- get (proj state)
   info <- get (info state)
-  
+
+
+
   loadIdentity
 
+  projectView state proj'
+
   --scale 0.5 0.5 (0.5::GLfloat)
+
 
   -- Set up perspective
   if proj' == PerspectiveView
@@ -270,6 +296,7 @@ main = do
     myInit args state
 
     displayCallback $= draw state
+    --reshapeCallback $= Just (reshape state)
     reshapeCallback $= Just (reshape state)
     
     keyboardMouseCallback $= Just (keyboard state)

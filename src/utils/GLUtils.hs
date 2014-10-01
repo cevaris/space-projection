@@ -40,6 +40,9 @@ color3f x y z = color (Color3 ((realToFrac x)::GLfloat) ((realToFrac y)::GLfloat
 setPerspective :: Float -> Float -> Float -> Float -> IO ()
 setPerspective fov aspect zNear zFar = perspective ((realToFrac fov)::GLdouble) ((realToFrac aspect)::GLdouble) ((realToFrac zNear)::GLdouble) ((realToFrac zFar)::GLdouble)
 
+setOrtho :: Float -> Float -> Float -> Float -> Float -> Float -> IO ()
+setOrtho left right bottom top nearVal farVal = ortho ((realToFrac left)::GLdouble) ((realToFrac right)::GLdouble) ((realToFrac bottom)::GLdouble) ((realToFrac top)::GLdouble) ((realToFrac nearVal)::GLdouble) ((realToFrac farVal)::GLdouble)
+
 setLookAt :: Point3 -> Point3 -> Point3 -> IO ()
 setLookAt (ex,ey,ez) (cx,cy,cz) (ux,uy,uz) = lookAt (vertex3d ex ey ez) (vertex3d cx cy cz) (vector3d ux uy uz)
 
