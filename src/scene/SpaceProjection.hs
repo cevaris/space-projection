@@ -142,31 +142,20 @@ visible _     NotVisible = idleCallback $= Nothing
 
 projectView :: State -> ProjectionView -> IO ()
 projectView state OrthogonalView  = do
-  --(Size width height) <- get windowSize
-  --let wf = fromIntegral width
-  --    hf = fromIntegral height
   dim <- get (dim state)
   asp <- get (asp state)
-  --if width <= height
-  --  then ortho (-1) 1 (-1) (hf/wf) (-500) (500:: GLdouble)
-  --  else ortho (-1) (wf/hf) (-1) 1 (-500) (500:: GLdouble)  
-  --ortho (-asp*dim,asp*dim, (-dim), dim, (-dim), dim)
   setOrtho ((-asp)*dim) (asp*dim) (-dim) dim (-dim) dim
-  
   putStrLn $ show OrthogonalView
-  postRedisplay Nothing
 
 projectView state PerspectiveView = do
   fov <- get (fov state)
   asp <- get (asp state)
   dim <- get (dim state)
-  setPerspective fov asp (500/4) (500*4)
+  setPerspective fov asp (dim/4) (dim*4)
 
   --(Size width height) <- get windowSize
   --perspective 100 (fromIntegral width / fromIntegral height) 1 500
-
   putStrLn $ show PerspectiveView
-  postRedisplay Nothing
 
 
 
@@ -246,12 +235,10 @@ draw state = do
           ey =    2*dim        *sin(ph)
           ez =    2*dim*cos(th)*cos(ph)
       setLookAt (ex,ey,ez) (0,0,0) (0,cos(ph),0)
-    --then do {setLookAt (1,1,0) (0,0,0) (0,1,0); putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez} 
+      putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez
     else do
       rotate (fToGL(ph)) (Vector3 1 0 0)
       rotate (fToGL(th)) (Vector3 0 1 0)
-  
-  --lookAt (Vertex3 ex ey ez) (Vertex3 0 0 0) (Vector3 0 cos(ph) 0)
   
   drawGrid 5
   
