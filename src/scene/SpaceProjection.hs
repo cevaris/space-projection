@@ -266,7 +266,6 @@ updateInfo state = do
     frames state $= 0
 
 
-
 setProjectionView :: State -> ProjectionView -> IO ()
 setProjectionView state PerspectiveView = do
   ph <- get (ph' state)
