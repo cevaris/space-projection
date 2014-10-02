@@ -23,6 +23,8 @@ data ModDirection = Increase | Decrease deriving (Show)
 
 data ProjectionView = PerspectiveView | OrthogonalView | FirstPersonView deriving (Show, Eq)
 
+data Direction = UpDirection | DownDirection | LeftDirection | RightDirection deriving (Show, Eq)
+
 zoomDelta = 5e-4
 
 data State = State {
@@ -68,15 +70,35 @@ keyboard state (SpecialKey KeyUp)   _ _ _ = modRotate state KeyUp
 keyboard state (SpecialKey KeyDown) _ _ _ = modRotate state KeyDown
 keyboard state (SpecialKey KeyLeft) _ _ _ = modRotate state KeyLeft
 keyboard state (SpecialKey KeyRight)_ _ _ = modRotate state KeyRight
+
 keyboard state (Char 'd')           _ _ _ = modDim state Decrease
 keyboard state (Char 'D')           _ _ _ = modDim state Increase
+
 keyboard state (Char 'f')           _ _ _ = modFov state Decrease
 keyboard state (Char 'F')           _ _ _ = modFov state Increase
+
+keyboard state (Char 'j')           _ _ _ = modDirection state LeftDirection
+keyboard state (Char 'l')           _ _ _ = modDirection state RightDirection
+keyboard state (Char 'k')           _ _ _ = modDirection state DownDirection
+keyboard state (Char 'i')           _ _ _ = modDirection state UpDirection
+
 keyboard state (Char '1')           _ _ _ = modProjection state PerspectiveView
 keyboard state (Char '2')           _ _ _ = modProjection state OrthogonalView
 keyboard state (Char '3')           _ _ _ = modProjection state FirstPersonView
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
+
+
+-- http://www.lighthouse3d.com/tutorials/glut-tutorial/keyboard-example-moving-around-the-world/
+modDirection :: State -> Direction -> IO ()
+modDirection state UpDirection = do
+  putStrLn $ show UpDirection
+modDirection state DownDirection = do
+  putStrLn $ show DownDirection
+modDirection state LeftDirection = do
+  putStrLn $ show LeftDirection
+modDirection state RightDirection = do
+  putStrLn $ show RightDirection
 
 
 modFov :: State -> ModDirection -> IO ()
