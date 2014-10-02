@@ -92,11 +92,6 @@ keyboard state (Char 'D')           _ _ _ = modDim state Increase
 keyboard state (Char 'f')           _ _ _ = modFov state Decrease
 keyboard state (Char 'F')           _ _ _ = modFov state Increase
 
-keyboard state (Char 'j')           _ _ _ = modDirection state LeftDirection
-keyboard state (Char 'l')           _ _ _ = modDirection state RightDirection
-keyboard state (Char 'k')           _ _ _ = modDirection state DownDirection
-keyboard state (Char 'i')           _ _ _ = modDirection state UpDirection
-
 keyboard state (Char '1')           _ _ _ = modProjection state FirstPersonView
 keyboard state (Char '2')           _ _ _ = modProjection state PerspectiveView
 keyboard state (Char '3')           _ _ _ = modProjection state OrthogonalView
@@ -104,42 +99,43 @@ keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
 
-modDirection :: State -> Direction -> IO ()
-modDirection state UpDirection = do
-  lx' <- get (lx state)
-  lz' <- get (lz state)
-  vx state $~! (+(lx'*fraction))
-  vz state $~! (+(lz'*fraction))
-modDirection state DownDirection = do
-  lx' <- get (lx state)
-  lz' <- get (lz state)
-  vx state $~! (\x -> x - (lx'*fraction))
-  vz state $~! (\x -> x - (lz'*fraction))
-modDirection state LeftDirection = do
-  angle state $~! (\x -> x - 0.05)
-  angle' <- get (angle state)
-  lx state $~! (\x -> sin(angle'))
-  lz state $~! (\x -> (-cos(angle')))
-modDirection state RightDirection = do
-  angle state $~! (+0.05)
-  angle' <- get (angle state)
-  lx state $~! (\x -> sin(angle'))
-  lz state $~! (\x -> (-cos(angle')))
-
-
 modRotate :: State -> SpecialKey -> IO ()
 modRotate state KeyDown = do
-  ph' state $~! (\x -> x - 5)
-  postRedisplay Nothing
+  proj' <- get (proj state)
+  if proj' == FirstPersonView
+    then do
+      lx' <- get (lx state)
+      lz' <- get (lz state)
+      vx state $~! (\x -> x - (lx'*fraction))
+      vz state $~! (\x -> x - (lz'*fraction))
+    else  ph' state $~! (\x -> x - 5)
 modRotate state KeyUp  = do
-  ph' state $~! (+5)
-  postRedisplay Nothing
+  proj' <- get (proj state)
+  if proj' == FirstPersonView
+    then do
+      lx' <- get (lx state)
+      lz' <- get (lz state)
+      vx state $~! (+(lx'*fraction))
+      vz state $~! (+(lz'*fraction))
+    else ph' state $~! (+5)
 modRotate state KeyRight = do
-  th' state $~! (\x -> x - 5)
-  postRedisplay Nothing
+  proj' <- get (proj state)
+  if proj' == FirstPersonView
+    then do
+      angle state $~! (+0.05)
+      angle' <- get (angle state)
+      lx state $~! (\x -> sin(angle'))
+      lz state $~! (\x -> (-cos(angle')))
+    else th' state $~! (\x -> x - 5)
 modRotate state KeyLeft = do
-  th' state $~! (+5)
-  postRedisplay Nothing
+  proj' <- get (proj state)
+  if proj' == FirstPersonView
+    then do
+      angle state $~! (\x -> x - 0.05)
+      angle' <- get (angle state)
+      lx state $~! (\x -> sin(angle'))
+      lz state $~! (\x -> (-cos(angle')))
+    else th' state $~! (+5)
 
 
 modFov :: State -> ModDirection -> IO ()
@@ -162,6 +158,12 @@ modDim state Increase = do
 
 modProjection :: State -> ProjectionView -> IO ()
 modProjection state proj' = do
+
+  --vx state $~! (\x -> 0)
+  --vz state $~! (\x -> 5)
+  --lx state $~! (\x -> 0)
+  --lx state $~! (\x -> (-1))
+
   -- Update PerspectiveView state
   proj state $~! (\x -> proj')
   -- Redraw scene
