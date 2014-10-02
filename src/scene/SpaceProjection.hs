@@ -48,8 +48,7 @@ makeState = do
   fv <- newIORef 55
   as <- newIORef 1
   di <- newIORef 2
-  pr <- newIORef OrthogonalView
-  --pr <- newIORef PerspectiveView
+  pr <- newIORef PerspectiveView
   i  <- newIORef ("","")
   return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, proj = pr, info = i }
 
@@ -80,7 +79,6 @@ keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
 
-
 modFov :: State -> ModDirection -> IO ()
 modFov state Decrease = do
   fov state $~! (\x -> x - 2)
@@ -102,14 +100,11 @@ modDim state Increase = do
 modProjection :: State -> ProjectionView -> IO ()
 modProjection state proj' = do
   -- Update PerspectiveView state
- 
   proj state $~! (\x -> proj')
-
+  -- Redraw scene
   s <- get windowSize
-
   reshape state s
-  ---- Render new state
-  --projectView state proj'
+
 
 modRotate :: State -> SpecialKey -> IO ()
 modRotate state KeyDown = do
@@ -126,8 +121,6 @@ modRotate state KeyLeft = do
   postRedisplay Nothing
 
 
-----------------------------------------------------------------------------------------------------------------
--- Misc sate modifiers
 idle :: State -> IdleCallback
 idle state = do
 
@@ -137,8 +130,8 @@ idle state = do
   dim' <- get (dim state)
   fov' <- get (fov state)
 
-  if fov' < 65
-    then fov state $~! (\x -> 65)
+  if fov' < 55
+    then fov state $~! (\x -> 55)
     else postRedisplay Nothing
 
   if dim' < 1
@@ -157,25 +150,22 @@ idle state = do
     then th' state $~! (\x -> 0)
     else postRedisplay Nothing
 
+
 visible :: State -> Visibility -> IO ()
 visible state Visible    = idleCallback $= Just (idle state)
 visible _     NotVisible = idleCallback $= Nothing
+
 
 projectView :: State -> ProjectionView -> IO ()
 projectView state OrthogonalView  = do
   dim <- get (dim state)
   asp <- get (asp state)
   setOrtho ((-asp)*dim) (asp*dim) (-dim) dim (-dim) dim
-  putStrLn $ show OrthogonalView
-
 projectView state PerspectiveView = do
   fov <- get (fov state)
   asp <- get (asp state)
   dim <- get (dim state)
   setPerspective fov asp (dim/4) (dim*4)
-  putStrLn $ show PerspectiveView
-
-
 
   
 reshape :: State -> ReshapeCallback
@@ -186,15 +176,11 @@ reshape state s@(Size width height) = do
   matrixMode $= Projection
   loadIdentity
 
-  -- Update Projection
   proj' <- get (proj state)
   projectView state proj'
 
   matrixMode $= Modelview 0
   loadIdentity
-
-
-  
 
 
 ----------------------------------------------------------------------------------------------------------------
@@ -222,7 +208,6 @@ updateInfo state = do
     frames state $= 0
 
 
-
 draw :: State -> IO ()
 draw state = do
     
@@ -237,8 +222,6 @@ draw state = do
 
   loadIdentity
 
-  --projectView state proj'
-
   -- Set up perspective
   if proj' == PerspectiveView
     then do
@@ -246,7 +229,6 @@ draw state = do
           ey =    2*dim               *sin(toDeg(ph))
           ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
       setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
-      --putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez
     else do
       rotate (fToGL(ph)) (Vector3 1 0 0)
       rotate (fToGL(th)) (Vector3 0 1 0)
@@ -255,15 +237,15 @@ draw state = do
   
   drawStar 0.5 (0, 1.5, 0)
 
-  drawStarCluster (10, 1, 3)
-  drawStarCluster (10, 10, 1)
-  drawStarCluster (1, 10, 10)
+  drawStarCluster (5, 1, 3)
+  drawStarCluster (5, 5, 1)
+  drawStarCluster (1, 5, 5)
 
   drawStation 0.0 0.5 (1,0,0) (0,1,0)
-  drawStation (fToGL(gr)) 0.35 ((-2),0,0) (0,0,1)
+  drawStation (fToGL(gr)) 0.35 ((-1),0,0) (0,0,1)
 
-  drawFighter 0.5 (0.55, 0, 0)  (0,1,0)  ((-1), 0,0)
-  drawFighter 0.7 (1, 0.7, 0)  (1,0,0)  (0,1,0)
+  drawFighter 0.5 (0.55, 0, 0) (0,1,0) ((-1), 0,0)
+  drawFighter 0.7 (1, 0.7, 0) (1,0,0) (0,1,0)
   drawFighter 0.5 (0,1,1) (1,1,1) (0,1,0)
 
   preservingMatrix $ do
