@@ -16,16 +16,13 @@ import Sphere
 
 ----------------------------------------------------------------------------------------------------------------
 -- Global State
---type View = (GLfloat, GLfloat, GLfloat)
 
-data Zoom = In | Out deriving (Show)
-data ModDirection = Increase | Decrease deriving (Show)
+data ChangeDirection = Increase | Decrease deriving (Show)
 
 data ProjectionView = PerspectiveView | OrthogonalView | FirstPersonView deriving (Show, Eq)
 
 data Direction = UpDirection | DownDirection | LeftDirection | RightDirection deriving (Show, Eq)
 
-zoomDelta = 5e-4
 fraction  = 0.1
 
 data State = State {
@@ -138,7 +135,7 @@ modRotate state KeyLeft = do
     else th' state $~! (+5)
 
 
-modFov :: State -> ModDirection -> IO ()
+modFov :: State -> ChangeDirection -> IO ()
 modFov state Decrease = do
   fov state $~! (\x -> x - 2)
   postRedisplay Nothing
@@ -147,7 +144,7 @@ modFov state Increase = do
   postRedisplay Nothing  
 
 
-modDim :: State -> ModDirection -> IO ()
+modDim :: State -> ChangeDirection -> IO ()
 modDim state Decrease = do
   dim state $~! (\x -> x - 0.1)
   postRedisplay Nothing
@@ -158,18 +155,11 @@ modDim state Increase = do
 
 modProjection :: State -> ProjectionView -> IO ()
 modProjection state proj' = do
-
-  --vx state $~! (\x -> 0)
-  --vz state $~! (\x -> 5)
-  --lx state $~! (\x -> 0)
-  --lx state $~! (\x -> (-1))
-
   -- Update PerspectiveView state
   proj state $~! (\x -> proj')
   -- Redraw scene
   s <- get windowSize
   reshape state s
-
 
 
 
