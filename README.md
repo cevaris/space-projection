@@ -1,4 +1,4 @@
-# Space Projection
+# [Space Projection](https://github.com/cevaris/space-projection)
 
 
 A Haskell OpenGL/GLUT implementation Space 3D Scene with multiple perspectives
