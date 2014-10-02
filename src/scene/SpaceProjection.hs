@@ -107,25 +107,21 @@ keyboard _     _                    _ _ _ = return ()
 -- http://www.lighthouse3d.com/tutorials/glut-tutorial/keyboard-example-moving-around-the-world/
 modDirection :: State -> Direction -> IO ()
 modDirection state UpDirection = do
-  putStrLn $ show UpDirection
   lx' <- get (lx state)
   lz' <- get (lz state)
   vx state $~! (+(lx'*fraction))
   vz state $~! (+(lz'*fraction))
 modDirection state DownDirection = do
-  putStrLn $ show DownDirection
   lx' <- get (lx state)
   lz' <- get (lz state)
   vx state $~! (\x -> x - (lx'*fraction))
   vz state $~! (\x -> x - (lz'*fraction))
 modDirection state LeftDirection = do
-  putStrLn $ show LeftDirection
   angle state $~! (\x -> x - 0.05)
   angle' <- get (angle state)
   lx state $~! (\x -> sin(angle'))
   lz state $~! (\x -> (-cos(angle')))
 modDirection state RightDirection = do
-  putStrLn $ show RightDirection
   angle state $~! (+0.05)
   angle' <- get (angle state)
   lx state $~! (\x -> sin(angle'))
@@ -224,7 +220,6 @@ projectView state FirstPersonView = do
   asp <- get (asp state)
   dim <- get (dim state)
   setPerspective fov asp (dim/4) (dim*4)
-  --gluPerspective(45.0f, ratio, 0.1f, 100.0f);
   
 reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
@@ -302,16 +297,6 @@ draw state = do
   loadIdentity
 
   setProjectionView state proj'
-
-  ---- Set up perspective
-  --if proj' == PerspectiveView
-  --  then do
-      
-  --  else if OrthogonalView
-  --    then do
-        
-  --  else 
-  --    putStrLn "FPV"
   
   drawGrid 5
   
