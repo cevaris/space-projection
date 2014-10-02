@@ -45,7 +45,7 @@ makeState = do
   ph <- newIORef 0
   th <- newIORef 0
   gr <- newIORef 0
-  fv <- newIORef 100
+  fv <- newIORef 55
   as <- newIORef 1
   di <- newIORef 2
   pr <- newIORef OrthogonalView
@@ -104,8 +104,12 @@ modProjection state proj' = do
   -- Update PerspectiveView state
  
   proj state $~! (\x -> proj')
-  -- Render new state
-  projectView state proj'
+
+  s <- get windowSize
+
+  reshape state s
+  ---- Render new state
+  --projectView state proj'
 
 modRotate :: State -> SpecialKey -> IO ()
 modRotate state KeyDown = do
@@ -169,16 +173,11 @@ projectView state PerspectiveView = do
   asp <- get (asp state)
   dim <- get (dim state)
   setPerspective fov asp (dim/4) (dim*4)
-
-  --(Size width height) <- get windowSize
-  --perspective 100 (fromIntegral width / fromIntegral height) 1 500
   putStrLn $ show PerspectiveView
 
 
 
   
-  
-
 reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
 
@@ -238,7 +237,7 @@ draw state = do
 
   loadIdentity
 
-  projectView state proj'
+  --projectView state proj'
 
   -- Set up perspective
   if proj' == PerspectiveView
@@ -247,9 +246,7 @@ draw state = do
           ey =    2*dim               *sin(toDeg(ph))
           ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
       setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
-      --setLookAt (0.1,0,0.1) (0,0,0) (0,cos(toDeg(ph)),0)
-      putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez
-      postRedisplay Nothing
+      --putStrLn $ show ex ++ " " ++ show ey ++ " " ++ show ez
     else do
       rotate (fToGL(ph)) (Vector3 1 0 0)
       rotate (fToGL(th)) (Vector3 0 1 0)
@@ -297,7 +294,6 @@ main = do
     myInit args state
 
     displayCallback $= draw state
-    --reshapeCallback $= Just (reshape state)
     reshapeCallback $= Just (reshape state)
     
     keyboardMouseCallback $= Just (keyboard state)
