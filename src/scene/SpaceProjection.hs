@@ -111,22 +111,22 @@ modDirection state UpDirection = do
   lx' <- get (lx state)
   lz' <- get (lz state)
   vx state $~! (+(lx'*fraction))
-  vx state $~! (+(lz'*fraction))
+  vz state $~! (+(lz'*fraction))
 modDirection state DownDirection = do
   putStrLn $ show DownDirection
   lx' <- get (lx state)
   lz' <- get (lz state)
   vx state $~! (\x -> x - (lx'*fraction))
-  vx state $~! (\x -> x - (lz'*fraction))
+  vz state $~! (\x -> x - (lz'*fraction))
 modDirection state LeftDirection = do
   putStrLn $ show LeftDirection
-  angle state $~! (\x -> x - 0.01)
+  angle state $~! (\x -> x - 0.05)
   angle' <- get (angle state)
   lx state $~! (\x -> sin(angle'))
   lz state $~! (\x -> (-cos(angle')))
 modDirection state RightDirection = do
   putStrLn $ show RightDirection
-  angle state $~! (+0.01)
+  angle state $~! (+0.05)
   angle' <- get (angle state)
   lx state $~! (\x -> sin(angle'))
   lz state $~! (\x -> (-cos(angle')))
@@ -286,14 +286,7 @@ setProjectionView state FirstPersonView = do
   vz' <- get (vz state)
   lx' <- get (lx state)
   lz' <- get (lz state)
-  
-  setLookAt (vx',1,vz') ((vx'+lx'),1,(vz'+lz')) (0,1,0)
-  --let ex = (-2)*dim*sin(toDeg(th))*cos(toDeg(ph))
-  --    ey =    2*dim               *sin(toDeg(ph))
-  --    ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
-  --setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
-  
-
+  setLookAt (vx',0,vz') ((vx'+lx'),0,(vz'+lz')) (0,1,0)
 
 draw :: State -> IO ()
 draw state = do
