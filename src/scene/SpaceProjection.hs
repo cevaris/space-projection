@@ -26,6 +26,7 @@ data ProjectionView = PerspectiveView | OrthogonalView | FirstPersonView derivin
 data Direction = UpDirection | DownDirection | LeftDirection | RightDirection deriving (Show, Eq)
 
 zoomDelta = 5e-4
+fraction  = 0.1
 
 data State = State {
    frames  :: IORef Int,
@@ -36,6 +37,11 @@ data State = State {
    asp     :: IORef Float,
    fov     :: IORef Float,
    dim     :: IORef Float,
+   angle   :: IORef Float,
+   lx      :: IORef Float,
+   lz      :: IORef Float,
+   vx      :: IORef Float,
+   vz      :: IORef Float,
    proj    :: IORef ProjectionView,
    info    :: IORef (String,String)
  }
@@ -50,9 +56,18 @@ makeState = do
   fv <- newIORef 55
   as <- newIORef 1
   di <- newIORef 2
+  an <- newIORef 0
+  xx <- newIORef 0
+  zz <- newIORef (-1.0)
+  xxx <- newIORef 0
+  zzz <- newIORef 5
   pr <- newIORef PerspectiveView
   i  <- newIORef ("","")
-  return $ State {  frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, proj = pr, info = i }
+  return $ State {  
+    frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, 
+    angle = an, lx = xx, lz = zz, vx = xxx, vz = zzz,
+    proj = pr, info = i
+  }
 
 ----------------------------------------------------------------------------------------------------------------
 -- Timer 
@@ -93,12 +108,28 @@ keyboard _     _                    _ _ _ = return ()
 modDirection :: State -> Direction -> IO ()
 modDirection state UpDirection = do
   putStrLn $ show UpDirection
+  lx' <- get (lx state)
+  lz' <- get (lz state)
+  vx state $~! (+(lx'*fraction))
+  vx state $~! (+(lz'*fraction))
 modDirection state DownDirection = do
   putStrLn $ show DownDirection
+  lx' <- get (lx state)
+  lz' <- get (lz state)
+  vx state $~! (\x -> x - (lx'*fraction))
+  vx state $~! (\x -> x - (lz'*fraction))
 modDirection state LeftDirection = do
   putStrLn $ show LeftDirection
+  angle state $~! (\x -> x - 0.01)
+  angle' <- get (angle state)
+  lx state $~! (\x -> sin(angle'))
+  lz state $~! (\x -> (-cos(angle')))
 modDirection state RightDirection = do
   putStrLn $ show RightDirection
+  angle state $~! (+0.01)
+  angle' <- get (angle state)
+  lx state $~! (\x -> sin(angle'))
+  lz state $~! (\x -> (-cos(angle')))
 
 
 modFov :: State -> ModDirection -> IO ()
@@ -188,7 +219,12 @@ projectView state PerspectiveView = do
   asp <- get (asp state)
   dim <- get (dim state)
   setPerspective fov asp (dim/4) (dim*4)
-
+projectView state FirstPersonView = do
+  fov <- get (fov state)
+  asp <- get (asp state)
+  dim <- get (dim state)
+  setPerspective fov asp (dim/4) (dim*4)
+  --gluPerspective(45.0f, ratio, 0.1f, 100.0f);
   
 reshape :: State -> ReshapeCallback
 reshape state s@(Size width height) = do
@@ -230,6 +266,35 @@ updateInfo state = do
     frames state $= 0
 
 
+
+setProjectionView :: State -> ProjectionView -> IO ()
+setProjectionView state PerspectiveView = do
+  ph <- get (ph' state)
+  th <- get (th' state)
+  dim <- get (dim state)
+  let ex = (-2)*dim*sin(toDeg(th))*cos(toDeg(ph))
+      ey =    2*dim               *sin(toDeg(ph))
+      ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
+  setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
+setProjectionView state OrthogonalView = do
+  ph <- get (ph' state)
+  th <- get (th' state)
+  rotate (fToGL(ph)) (Vector3 1 0 0)
+  rotate (fToGL(th)) (Vector3 0 1 0)
+setProjectionView state FirstPersonView = do
+  vx' <- get (vx state)
+  vz' <- get (vz state)
+  lx' <- get (lx state)
+  lz' <- get (lz state)
+  
+  setLookAt (vx',1,vz') ((vx'+lx'),1,(vz'+lz')) (0,1,0)
+  --let ex = (-2)*dim*sin(toDeg(th))*cos(toDeg(ph))
+  --    ey =    2*dim               *sin(toDeg(ph))
+  --    ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
+  --setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
+  
+
+
 draw :: State -> IO ()
 draw state = do
     
@@ -244,16 +309,17 @@ draw state = do
 
   loadIdentity
 
-  -- Set up perspective
-  if proj' == PerspectiveView
-    then do
-      let ex = (-2)*dim*sin(toDeg(th))*cos(toDeg(ph))
-          ey =    2*dim               *sin(toDeg(ph))
-          ez =    2*dim*cos(toDeg(th))*cos(toDeg(ph))
-      setLookAt (ex,ey,ez) (0,0,0) (0,cos(toDeg(ph)),0)
-    else do
-      rotate (fToGL(ph)) (Vector3 1 0 0)
-      rotate (fToGL(th)) (Vector3 0 1 0)
+  setProjectionView state proj'
+
+  ---- Set up perspective
+  --if proj' == PerspectiveView
+  --  then do
+      
+  --  else if OrthogonalView
+  --    then do
+        
+  --  else 
+  --    putStrLn "FPV"
   
   drawGrid 5
   
