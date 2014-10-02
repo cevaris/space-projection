@@ -61,7 +61,7 @@ makeState = do
   zz <- newIORef (-1.0)
   xxx <- newIORef 0
   zzz <- newIORef 5
-  pr <- newIORef PerspectiveView
+  pr <- newIORef FirstPersonView
   i  <- newIORef ("","")
   return $ State {  
     frames = f, t0 = t, ph' = ph, th' = th, gr' = gr, asp = as, fov = fv, dim = di, 
@@ -97,14 +97,13 @@ keyboard state (Char 'l')           _ _ _ = modDirection state RightDirection
 keyboard state (Char 'k')           _ _ _ = modDirection state DownDirection
 keyboard state (Char 'i')           _ _ _ = modDirection state UpDirection
 
-keyboard state (Char '1')           _ _ _ = modProjection state PerspectiveView
-keyboard state (Char '2')           _ _ _ = modProjection state OrthogonalView
-keyboard state (Char '3')           _ _ _ = modProjection state FirstPersonView
+keyboard state (Char '1')           _ _ _ = modProjection state FirstPersonView
+keyboard state (Char '2')           _ _ _ = modProjection state PerspectiveView
+keyboard state (Char '3')           _ _ _ = modProjection state OrthogonalView
 keyboard _     (Char '\27')         _ _ _ = exitWith ExitSuccess
 keyboard _     _                    _ _ _ = return ()
 
 
--- http://www.lighthouse3d.com/tutorials/glut-tutorial/keyboard-example-moving-around-the-world/
 modDirection :: State -> Direction -> IO ()
 modDirection state UpDirection = do
   lx' <- get (lx state)
@@ -126,6 +125,21 @@ modDirection state RightDirection = do
   angle' <- get (angle state)
   lx state $~! (\x -> sin(angle'))
   lz state $~! (\x -> (-cos(angle')))
+
+
+modRotate :: State -> SpecialKey -> IO ()
+modRotate state KeyDown = do
+  ph' state $~! (\x -> x - 5)
+  postRedisplay Nothing
+modRotate state KeyUp  = do
+  ph' state $~! (+5)
+  postRedisplay Nothing
+modRotate state KeyRight = do
+  th' state $~! (\x -> x - 5)
+  postRedisplay Nothing
+modRotate state KeyLeft = do
+  th' state $~! (+5)
+  postRedisplay Nothing
 
 
 modFov :: State -> ModDirection -> IO ()
@@ -155,19 +169,7 @@ modProjection state proj' = do
   reshape state s
 
 
-modRotate :: State -> SpecialKey -> IO ()
-modRotate state KeyDown = do
-  ph' state $~! (\x -> x - 5)
-  postRedisplay Nothing
-modRotate state KeyUp  = do
-  ph' state $~! (+5)
-  postRedisplay Nothing
-modRotate state KeyRight = do
-  th' state $~! (\x -> x - 5)
-  postRedisplay Nothing
-modRotate state KeyLeft = do
-  th' state $~! (+5)
-  postRedisplay Nothing
+
 
 
 idle :: State -> IdleCallback
@@ -334,7 +336,7 @@ main = do
     (_progName, args) <- getArgsAndInitialize
     initialDisplayMode $= [ RGBMode, WithDepthBuffer, DoubleBuffered ]
     
-    initialWindowPosition $= Position 500 500
+    --initialWindowPosition $= Position 500 500
     _window <- createWindow "Space Scene Projection - Adam Cardenas"
 
     state <- makeState
