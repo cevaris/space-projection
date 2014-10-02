@@ -3,13 +3,16 @@
 
 A Haskell OpenGL/GLUT implementation Space 3D Scene with multiple perspectives
 
+
 ## Installation
     # Build/Compile project
     make
     # Execute application
     ./SpaceProjection
 
+
 ## Assignment Length
+
 ~15 hours
 
   
